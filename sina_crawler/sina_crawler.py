@@ -11,10 +11,12 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common import exceptions
 import networkx as nx
 import matplotlib.pyplot as plt
+from threading import Thread
 
 
 # driver = webdriver.Firefox()
-driver = webdriver.PhantomJS()
+# driver = webdriver.PhantomJS()
+cookies = {}
 
 
 def read_users(in_file, delimiter=" "):
@@ -34,20 +36,23 @@ def read_users(in_file, delimiter=" "):
     return weibos
 
 
-def get_uid(uid):
+def get_uid(uid, cookies):
     """
 
     :param uid: uid in string, might be customized
+    :param cookies: cookies
     :return: uid in int
     """
     if uid.isdigit():
         return int(uid)
     else:
         uid_driver = webdriver.PhantomJS()
-        uid_driver.get("https://weibo.cn/")
         uid_driver.delete_all_cookies()
 
-        for cookie in driver.get_cookies():
+        uid_driver.get("https://weibo.cn/")
+        time.sleep(1)
+        for cookie in cookies:
+            print(cookie)
             uid_driver.add_cookie(cookie)
 
         uid_driver.get("https://weibo.cn/" + str(uid))
@@ -60,30 +65,9 @@ def get_uid(uid):
                 uid = int(uid[0][1:-1])
                 break
 
-        #uid_driver.quit()
+        # uid_driver.quit()
         # print uid
         return uid
-
-
-def test_cookie(cookies):
-    """
-    Test if cookies are working
-    
-    :param cookies: cookies to be tested
-    :return: True or false, cookie will be set to that cookie
-    """
-    driver.delete_all_cookies()
-    for cookie in cookies:
-        driver.add_cookie(cookie)
-
-    driver.get('http://weibo.cn/')
-    # print(type(driver.page_source))
-    if 'signin' not in driver.page_source:
-        print('登录成功')
-        return True
-    else:
-        print('登录失败')
-        return False
 
 
 def login(username, password):
@@ -94,6 +78,8 @@ def login(username, password):
     :param password: corresponding password to username
     :return: login status -- can be true or false
     """
+    driver = webdriver.PhantomJS()
+
     driver.get('https://passport.weibo.cn/signin/login')
     # time.sleep(15)
     WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.ID, 'loginName')))
@@ -112,8 +98,16 @@ def login(username, password):
 
     submit = driver.find_element_by_id('loginAction')
     submit.click()
+    time.sleep(2)
 
-    return test_cookie(driver.get_cookies()), driver.get_cookies()
+    driver.get('http://weibo.cn/')
+    if 'info' in driver.page_source:
+        print('登录成功')
+        cookies[username] = driver.get_cookies()
+        return True
+    else:
+        print('登录失败')
+        return False
 
 
 def crawl_info(uid, to_file=False, cookies=None):
@@ -126,8 +120,17 @@ def crawl_info(uid, to_file=False, cookies=None):
     :param cookies: set cookie to driver if passed in
     :return: a dict for specific user, including nickname, uid, weibo, follwer, following
     """
-    if cookies is not None:
-        if not test_cookie(cookies):
+    driver = webdriver.PhantomJS()
+
+    if bool(cookies):
+        driver.get('http://weibo.cn/')
+        for cookie in cookies:
+            driver.add_cookie(cookie)
+        driver.get('http://weibo.cn/')
+        if 'info' in driver.page_source:
+            print('登录成功')
+        else:
+            print('登录失败')
             return
 
     driver.get("https://weibo.cn/" + str(uid))
@@ -174,16 +177,25 @@ def crawl_weibo(uid, pages=None, to_file=False, cookies=None):
     :param cookies: set cookie to driver if passed in
     :return: a list of weibo, where every element is a dict including weibo content, attitudes, reposts and comments
     """
-    uid = get_uid(uid)
+    driver = webdriver.PhantomJS()
+    if bool(cookies):
+        driver.get('http://weibo.cn/')
+        for cookie in cookies:
+            driver.add_cookie(cookie)
+        driver.get('http://weibo.cn/')
+        if 'info' in driver.page_source:
+            print('登录成功')
+        else:
+            print('登录失败')
+            return
+
+    uid = get_uid(uid, driver.get_cookies())
     if pages is None:
         driver.get('https://weibo.cn/' + str(uid))
         try:
             pages = int(driver.find_element_by_xpath('//input[@name="mp"]').get_attribute('value'))
         except exceptions.NoSuchElementException:
             pages = 1
-    if cookies is not None:
-        if not test_cookie(cookies):
-            return
 
     weibos = []
     for i in range(1, pages + 1):
@@ -237,18 +249,30 @@ def crawl_fans(uid, pages=None, to_file=False, cookies=None):
     :return: a list of fans in uid
     """
 
-    uid = get_uid(uid)
+    driver = webdriver.PhantomJS()
+    if bool(cookies):
+        driver.get('http://weibo.cn/')
+        time.sleep(1)
+        driver.delete_all_cookies()
+        for cookie in cookies:
+            driver.add_cookie(cookie)
+        driver.get('http://weibo.cn/')
+        if 'info' in driver.page_source:
+            print('登录成功')
+        else:
+            print('登录失败')
+            return
+
+    uid = get_uid(uid, driver.get_cookies())
     if pages is None:
         driver.get('https://weibo.cn/' + str(uid) + '/fans')
         try:
             pages = int(driver.find_element_by_xpath('//input[@name="mp"]').get_attribute('value'))
         except exceptions.NoSuchElementException:
             pages = 1
-    if cookies is not None:
-        if not test_cookie(cookies):
-            return
 
     print("获取粉丝")
+    print(str(pages))
     fans_list = []
     for i in range(1, pages + 1):
         print("正在抓取第" + str(i) + "页")
@@ -256,25 +280,24 @@ def crawl_fans(uid, pages=None, to_file=False, cookies=None):
         # print driver.page_source
         user_img_list = driver.find_elements_by_xpath('//table//td[@style]//a')
         print("本页共有" + str(len(user_img_list)) + '个粉丝')
-        if len(user_img_list) < 1:
-            break
+
         for avatars in user_img_list:
             fans_list.append(avatars.get_attribute('href').split("/")[-1])
 
+    print(fans_list)
+    # processed_fan_list = []
+    # for fan in fans_list:
+    #     # print(fan)
+    #     fan_uid = get_uid(fan, driver.get_cookies())
+    #     # print fan_uid
+    #     processed_fan_list.append(fan_uid)
+
     if to_file:
         with open(str(uid) + '_fans.txt', "a+") as f:
-            f.write(str(fans_list).encode('utf-8'))
+            f.write(str(fans_list))
             f.write('\n')
 
-    print(fans_list)
-    processed_fan_list = []
-    for fan in fans_list:
-        print(fan)
-        fan_uid = get_uid(fan)
-        # print fan_uid
-        processed_fan_list.append(fan_uid)
-
-    return list(set(processed_fan_list))
+    return list(set(fans_list))
 
 
 def crawl_repost(uid, weiboid, pages=None, graph=False, cookies=None):
@@ -288,16 +311,25 @@ def crawl_repost(uid, weiboid, pages=None, graph=False, cookies=None):
     :param cookies: use cookies
     :return: a dict from reposter uid to repost content and from uid.
     """
-    uid = get_uid(uid)
+
+    driver = webdriver.PhantomJS()
+    if bool(cookies):
+        driver.get('http://weibo.cn/')
+        for cookie in cookies:
+            driver.add_cookie(cookie)
+        driver.get('http://weibo.cn/')
+        if 'info' in driver.page_source:
+            print('登录成功')
+        else:
+            print('登录失败')
+
+    uid = get_uid(uid, driver.get_cookies())
     if pages is None:
         driver.get('https://weibo.cn/repost/' + weiboid + '?uid=' + str(uid))
         try:
             pages = int(driver.find_element_by_xpath('//input[@name="mp"]').get_attribute('value'))
         except exceptions.NoSuchElementException:
             pages = 1
-    if cookies is not None:
-        if not test_cookie(cookies):
-            return
 
     reposters = {}
     for i in range(1, pages + 1):
@@ -338,7 +370,6 @@ def crawl_repost(uid, weiboid, pages=None, graph=False, cookies=None):
                     'from_uid': [repost_from_uid],
                 }
                 reposters[reposter_uid] = repost_info
-
     print(reposters)
 
     if graph:
@@ -346,7 +377,6 @@ def crawl_repost(uid, weiboid, pages=None, graph=False, cookies=None):
         for reposter in reposters.keys():
             for from_uid in reposters[reposter]['from_uid']:
                 G.add_edge(from_uid, reposter)
-
         nx.draw_networkx(G)
         plt.savefig("path.png")
 
@@ -355,10 +385,21 @@ def crawl_repost(uid, weiboid, pages=None, graph=False, cookies=None):
 
 if __name__ == '__main__':
     weibo_accounts = read_users('weibos')
-    user = random.choice(list(weibo_accounts.keys()))
-    while not login(user, weibo_accounts[user])[0]:
-        user = random.choice(list(weibo_accounts.keys()))
 
-    crawl_repost('2648325582', 'F9CRDz8GJ', pages=1, graph=True)
+    count = 0
+    login_threads = []
 
-    driver.quit()
+    for user in random.sample(list(weibo_accounts.keys()), 20):
+        t = Thread(target=login, args=(user, weibo_accounts[user]))
+        login_threads.append(t)
+    for thr in login_threads:
+        thr.start()
+    for thr in login_threads:
+        thr.join()
+
+    print(cookies)
+    print('登录完成')
+
+    fans_threads = []
+    for user in random.sample(list(cookies.keys()), min(5, len(cookies))):
+       crawl_fans('2718604160', to_file=True, cookies=cookies[user])

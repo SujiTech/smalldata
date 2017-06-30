@@ -319,6 +319,7 @@ def crawl_repost(weibo_id, pages=None, graph=False, cookies=None, reposters={}):
     driver = webdriver.PhantomJS()
     if bool(cookies):
         driver.get('http://weibo.cn/')
+        time.sleep(1)
         for cookie in cookies:
             driver.add_cookie(cookie)
         driver.get('http://weibo.cn/')
@@ -349,10 +350,10 @@ def crawl_repost(weibo_id, pages=None, graph=False, cookies=None, reposters={}):
 
             reposter_content = ":".join(repost.text.split(":")[1:])
             reposter_content = reposter_content[:reposter_content.find(u'赞')].split("//@")[0]
-            print(reposter_content)
+            # print(reposter_content)
 
             repost_weibo_id = repost.find_element_by_partial_link_text(u'赞').get_attribute('href').split("/")[-2]
-
+            print(repost_weibo_id)
             # if '//@' in repost.text:
             #     pattern = '\/\/<a[^@]*\>'
             #     source = re.findall(pattern, repost.get_attribute('innerHTML'), re.M)[0]
@@ -372,9 +373,10 @@ def crawl_repost(weibo_id, pages=None, graph=False, cookies=None, reposters={}):
                 # 'from_uid': [repost_from_uid],
                 'weibo_id': repost_weibo_id,
             }
+
             reposters[reposter_uid] = repost_info
 
-    print(reposters)
+    # print(reposters)
 
     # if graph:
     #     G = nx.DiGraph()

@@ -3,16 +3,14 @@
 import re
 import time
 import json
-import random
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common import exceptions
-import networkx as nx
+# import networkx as nx
 import matplotlib.pyplot as plt
 from threading import Thread
-import time
 
 # driver = webdriver.Firefox()
 # driver = webdriver.PhantomJS()
@@ -306,12 +304,12 @@ def crawl_fans(uid, pages=None, to_file=False, cookies=None):
     return list(set(fans_list))
 
 
-def crawl_repost(uid, weiboid, pages=None, graph=False, cookies=None):
+def crawl_repost(weibo_id, pages=None, graph=False, cookies=None, reposters={}):
     """
     Crawl repost infomation around a weibo.
 
     :param uid: weibo's original poster's uid
-    :param weiboid: weibo's id itself
+    :param weibo_id: weibo's id itself
     :param pages: pages to crawl
     :param graph: if output to a graph
     :param cookies: use cookies
@@ -328,18 +326,18 @@ def crawl_repost(uid, weiboid, pages=None, graph=False, cookies=None):
             print('登录成功')
         else:
             print('登录失败')
+            return None
 
-    uid = get_uid(uid, driver.get_cookies())
+    # uid = get_uid(uid, driver.get_cookies())
     if pages is None:
-        driver.get('https://weibo.cn/repost/' + weiboid + '?uid=' + str(uid))
+        driver.get('https://weibo.cn/repost/' + weibo_id)
         try:
             pages = int(driver.find_element_by_xpath('//input[@name="mp"]').get_attribute('value'))
         except exceptions.NoSuchElementException:
             pages = 1
-
-    reposters = {}
+    print(weibo_id)
     for i in range(1, pages + 1):
-        driver.get('https://weibo.cn/repost/' + weiboid + '?uid=' + str(uid) + '&page=' + str(i))
+        driver.get('https://weibo.cn/repost/' + weibo_id + '?page=' + str(i))
         repost_list = driver.find_elements_by_xpath('//div[@class="c"]')
         for repost in repost_list:
             if 'attitude' not in repost.get_attribute('innerHTML'):
@@ -347,71 +345,44 @@ def crawl_repost(uid, weiboid, pages=None, graph=False, cookies=None):
 
             reposter_info = repost.find_element_by_xpath('.//a')
             reposter_nickname = reposter_info.text
-            reposter_uid = get_uid(reposter_info.get_attribute('href').split("/")[-1])
-            print(reposter_nickname, reposter_uid)
+            reposter_uid = reposter_info.get_attribute('href').split("/")[-1]
 
             reposter_content = ":".join(repost.text.split(":")[1:])
             reposter_content = reposter_content[:reposter_content.find(u'赞')].split("//@")[0]
             print(reposter_content)
 
-            if '//@' in repost.text:
-                pattern = '\/\/<a[^@]*\>'
-                source = re.findall(pattern, repost.get_attribute('innerHTML'), re.M)[0]
-                source = source[source.find('\"') + 2: -2]
-                # print(source)
-                repost_from_uid = get_uid(source)
-                # print(repost_from_uid)
-            else:
-                repost_from_uid = uid
-            print(repost_from_uid)
+            repost_weibo_id = repost.find_element_by_partial_link_text(u'赞').get_attribute('href').split("/")[-2]
 
-            if reposter_uid in reposters.keys():
-                reposters[reposter_uid]['content'].append(reposter_content)
-                reposters[reposter_uid]['from'].append(repost_from_uid)
-            else:
-                repost_info = {
-                    'nickname': reposter_nickname,
-                    'uid': reposter_uid,
-                    'content': [reposter_content],
-                    'from_uid': [repost_from_uid],
-                }
-                reposters[reposter_uid] = repost_info
+            # if '//@' in repost.text:
+            #     pattern = '\/\/<a[^@]*\>'
+            #     source = re.findall(pattern, repost.get_attribute('innerHTML'), re.M)[0]
+            #     source = source[source.find('\"') + 2: -2]
+            #     # print(source)
+            #     repost_from_uid = get_uid(source)
+            #     # print(repost_from_uid)
+            # else:
+            #     repost_from_uid = uid
+            # print(repost_from_uid)
+
+
+            repost_info = {
+                'nickname': reposter_nickname,
+                'uid': reposter_uid,
+                'content': reposter_content,
+                # 'from_uid': [repost_from_uid],
+                'weibo_id': repost_weibo_id,
+            }
+            reposters[reposter_uid] = repost_info
+
     print(reposters)
 
-    if graph:
-        G = nx.DiGraph()
-        for reposter in reposters.keys():
-            for from_uid in reposters[reposter]['from_uid']:
-                G.add_edge(from_uid, reposter)
-        nx.draw_networkx(G)
-        plt.savefig("path.png")
+    # if graph:
+    #     G = nx.DiGraph()
+    #     for reposter in reposters.keys():
+    #         for from_uid in reposters[reposter]['from_uid']:
+    #             G.add_edge(from_uid, reposter)
+    #     nx.draw_networkx(G)
+    #     plt.savefig("path.png")
 
     return reposters
-
-
-if __name__ == '__main__':
-    weibo_accounts = read_users('weibos')
-
-    while  True:
-        login_threads = []
-        for user in random.sample(list(weibo_accounts.keys()), 30):
-            if user in cookies:
-                continue
-            t = Thread(target=login, args=(user, weibo_accounts[user]))
-            login_threads.append(t)
-        for thr in login_threads:
-            thr.start()
-        for thr in login_threads:
-            thr.join()
-
-        print(cookies)
-        print('登录完成')
-
-        fans_threads = []
-        for user in random.sample(list(cookies.keys()), min(10, len(cookies))):
-            ret = crawl_fans('2718604160', to_file=True, cookies=cookies[user])
-            if ret is None:
-                login(user, weibo_accounts[user])
-
-        time.sleep(3600)
 

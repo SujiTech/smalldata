@@ -2,7 +2,8 @@
 
 from sina_crawler import *
 import random
-
+from threading import Thread
+import networkx as nx
 
 weibo_accounts = read_users('weibos')
 
@@ -20,8 +21,9 @@ for thr in login_threads:
 print(cookies)
 print('登录完成')
 
-crawl_list = ['F9BuPfjFb']
-for i in range(2):
+G = nx.DiGraph()
+crawl_list = ['FafFXpljI']
+for i in range(2):  # set depth
     repost_threads = []
     reposters = [{} for _ in range(len(crawl_list))]
     for n, weibo in enumerate(crawl_list):
@@ -38,9 +40,11 @@ for i in range(2):
     for repost in reposters:
         for uid in repost.keys():
             crawl_list.append(repost[uid]['weibo_id'])
+            G.add_edge(repost[uid]['from_weibo_id'], repost[uid]['weibo_id'])
     print(crawl_list)
 
-
+nx.draw_networkx(G)
+plt.savefig("path.png")
 
 
 

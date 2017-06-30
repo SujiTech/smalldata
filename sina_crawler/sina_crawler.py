@@ -8,12 +8,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common import exceptions
-# import networkx as nx
+import networkx as nx
 import matplotlib.pyplot as plt
-from threading import Thread
 
-# driver = webdriver.Firefox()
-# driver = webdriver.PhantomJS()
 cookies = {}
 
 
@@ -65,8 +62,6 @@ def get_uid(uid, cookies):
                 uid = int(uid[0][1:-1])
                 break
 
-        # uid_driver.quit()
-        # print uid
         return uid
 
 
@@ -336,7 +331,7 @@ def crawl_repost(weibo_id, pages=None, graph=False, cookies=None, reposters={}):
             pages = int(driver.find_element_by_xpath('//input[@name="mp"]').get_attribute('value'))
         except exceptions.NoSuchElementException:
             pages = 1
-    print(weibo_id)
+    # print(weibo_id)
     for i in range(1, pages + 1):
         driver.get('https://weibo.cn/repost/' + weibo_id + '?page=' + str(i))
         repost_list = driver.find_elements_by_xpath('//div[@class="c"]')
@@ -365,8 +360,8 @@ def crawl_repost(weibo_id, pages=None, graph=False, cookies=None, reposters={}):
             #     repost_from_uid = uid
             # print(repost_from_uid)
 
-
             repost_info = {
+                'from_weibo_id': weibo_id,
                 'nickname': reposter_nickname,
                 'uid': reposter_uid,
                 'content': reposter_content,
@@ -377,14 +372,6 @@ def crawl_repost(weibo_id, pages=None, graph=False, cookies=None, reposters={}):
             reposters[reposter_uid] = repost_info
 
     # print(reposters)
-
-    # if graph:
-    #     G = nx.DiGraph()
-    #     for reposter in reposters.keys():
-    #         for from_uid in reposters[reposter]['from_uid']:
-    #             G.add_edge(from_uid, reposter)
-    #     nx.draw_networkx(G)
-    #     plt.savefig("path.png")
 
     return reposters
 

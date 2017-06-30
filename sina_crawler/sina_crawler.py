@@ -12,7 +12,7 @@ from selenium.common import exceptions
 import networkx as nx
 import matplotlib.pyplot as plt
 from threading import Thread
-
+import time
 
 # driver = webdriver.Firefox()
 # driver = webdriver.PhantomJS()
@@ -30,8 +30,10 @@ def read_users(in_file, delimiter=" "):
     with open(in_file, 'r') as f:
         weibos = {}
         for line in f:
-            weibo = line.split(delimiter)
-            weibos[weibo[0]] = weibo[1]
+            weibo = line.strip().split(delimiter)
+            # print weibo
+            if len(weibo) > 1:
+                weibos[weibo[0]] = weibo[1]
 
     return weibos
 
@@ -100,13 +102,16 @@ def login(username, password):
     submit.click()
     time.sleep(2)
 
+    driver_cookies = driver.get_cookies()
     driver.get('http://weibo.cn/')
     if 'info' in driver.page_source:
         print('登录成功')
-        cookies[username] = driver.get_cookies()
-        return True
+        driver.quit()
+        cookies[username] = driver_cookies
+        return driver_cookies
     else:
         print('登录失败')
+        driver.quit()
         return False
 
 
@@ -261,7 +266,7 @@ def crawl_fans(uid, pages=None, to_file=False, cookies=None):
             print('登录成功')
         else:
             print('登录失败')
-            return
+            return None
 
     uid = get_uid(uid, driver.get_cookies())
     if pages is None:
@@ -297,6 +302,7 @@ def crawl_fans(uid, pages=None, to_file=False, cookies=None):
             f.write(str(fans_list))
             f.write('\n')
 
+    driver.quit()
     return list(set(fans_list))
 
 
@@ -386,20 +392,26 @@ def crawl_repost(uid, weiboid, pages=None, graph=False, cookies=None):
 if __name__ == '__main__':
     weibo_accounts = read_users('weibos')
 
-    count = 0
-    login_threads = []
+    while  True:
+        login_threads = []
+        for user in random.sample(list(weibo_accounts.keys()), 30):
+            if user in cookies:
+                continue
+            t = Thread(target=login, args=(user, weibo_accounts[user]))
+            login_threads.append(t)
+        for thr in login_threads:
+            thr.start()
+        for thr in login_threads:
+            thr.join()
 
-    for user in random.sample(list(weibo_accounts.keys()), 20):
-        t = Thread(target=login, args=(user, weibo_accounts[user]))
-        login_threads.append(t)
-    for thr in login_threads:
-        thr.start()
-    for thr in login_threads:
-        thr.join()
+        print(cookies)
+        print('登录完成')
 
-    print(cookies)
-    print('登录完成')
+        fans_threads = []
+        for user in random.sample(list(cookies.keys()), min(10, len(cookies))):
+            ret = crawl_fans('2718604160', to_file=True, cookies=cookies[user])
+            if ret is None:
+                login(user, weibo_accounts[user])
 
-    fans_threads = []
-    for user in random.sample(list(cookies.keys()), min(5, len(cookies))):
-       crawl_fans('2718604160', to_file=True, cookies=cookies[user])
+        time.sleep(3600)
+

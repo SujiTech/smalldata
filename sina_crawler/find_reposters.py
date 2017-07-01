@@ -2,45 +2,38 @@
 
 from sina_crawler import *
 import random
-from threading import Thread
 import networkx as nx
+from concurrent.futures import ThreadPoolExecutor
 
 weibo_accounts = read_users('weibos')
 
-login_threads = []
-for user in random.sample(list(weibo_accounts.keys()), 5):
-    if user in cookies:
-        continue
-    t = Thread(target=login, args=(user, weibo_accounts[user]))
-    login_threads.append(t)
-for thr in login_threads:
-    thr.start()
-for thr in login_threads:
-    thr.join()
+with ThreadPoolExecutor(max_workers=10) as executor:
+    for user in random.sample(weibo_accounts.keys(), 10):
+        if user not in cookies:
+            executor.submit(login, user, weibo_accounts[user])
 
 print(cookies)
 print('登录完成')
 
 G = nx.DiGraph()
 crawl_list = ['FafFXpljI']
-for i in range(2):  # set depth
-    repost_threads = []
-    reposters = [{} for _ in range(len(crawl_list))]
-    for n, weibo in enumerate(crawl_list):
-        t = Thread(target=crawl_repost, args=(weibo, None, False,
-                                              random.choice(list(cookies.values())), reposters[n]))
-        repost_threads.append(t)
+crawled_set = set(crawl_list)
+for i in range(4):  # set depth
+    for weibo in crawl_list:
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            reposts = [executor.submit(crawl_repost, weibo, None, False, cookies[random.choice(cookies.keys())])
+                       for weibo in crawl_list]
     crawl_list = []
-    for thr in repost_threads:
-        thr.start()
-    for thr in repost_threads:
-        thr.join()
     print('爬取完成')
 
-    for repost in reposters:
-        for uid in repost.keys():
-            crawl_list.append(repost[uid]['weibo_id'])
-            G.add_edge(repost[uid]['from_weibo_id'], repost[uid]['weibo_id'])
+    for repost in reposts:
+        # print(len(repost.result()))
+        for uid in repost.result().keys():
+            # if repost[uid]['weibo_id'] not in crawled_set:
+            # print(repost.result()[uid])
+            crawl_list.append(repost.result()[uid]['weibo_id'])
+            G.add_edge(repost.result()[uid]['from_weibo_id'], repost.result()[uid]['weibo_id'])
+    crawl_list = list(set(crawl_list))
     print(crawl_list)
 
 nx.draw_networkx(G)

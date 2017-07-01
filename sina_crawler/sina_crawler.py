@@ -335,6 +335,7 @@ def crawl_repost(weibo_id, pages=None, graph=False, cookies=None, reposters={}):
     for i in range(1, pages + 1):
         driver.get('https://weibo.cn/repost/' + weibo_id + '?page=' + str(i))
         repost_list = driver.find_elements_by_xpath('//div[@class="c"]')
+        # print(len(repost_list))
         for repost in repost_list:
             if 'attitude' not in repost.get_attribute('innerHTML'):
                 continue

@@ -2,21 +2,15 @@
 
 from sina_crawler import *
 import random
+from concurrent.futures import ThreadPoolExecutor
 import time
-
 
 weibo_accounts = read_users('weibos')
 while True:
-    login_threads = []
-    for user in random.sample(list(weibo_accounts.keys()), 30):
-        if user in cookies:
-            continue
-        t = Thread(target=login, args=(user, weibo_accounts[user]))
-        login_threads.append(t)
-    for thr in login_threads:
-        thr.start()
-    for thr in login_threads:
-        thr.join()
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        for user in random.sample(weibo_accounts.keys(), 10):
+            if user not in cookies:
+                executor.submit(login, user, weibo_accounts[user])
 
     print(cookies)
     print('登录完成')

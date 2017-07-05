@@ -74,7 +74,7 @@ def login(username, password):
     :return: login status -- can be true or false
     """
     driver = webdriver.PhantomJS()
-
+    # driver = webdriver.Firefox()
     driver.get('https://passport.weibo.cn/signin/login')
     # time.sleep(15)
     WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.ID, 'loginName')))
@@ -97,7 +97,8 @@ def login(username, password):
 
     driver_cookies = driver.get_cookies()
     driver.get('http://weibo.cn/')
-    if 'info' in driver.page_source:
+    WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, 'c')))
+    if 'logout' in driver.page_source:
         print('登录成功')
         driver.quit()
         cookies[username] = driver_cookies
@@ -105,7 +106,7 @@ def login(username, password):
     else:
         print('登录失败')
         driver.quit()
-        return False
+        return False, None
 
 
 def crawl_info(uid, to_file=False, cookies=None):
@@ -125,7 +126,7 @@ def crawl_info(uid, to_file=False, cookies=None):
         for cookie in cookies:
             driver.add_cookie(cookie)
         driver.get('http://weibo.cn/')
-        if 'info' in driver.page_source:
+        if 'logout' in driver.page_source:
             print('登录成功')
         else:
             print('登录失败')
@@ -181,7 +182,7 @@ def crawl_weibo(uid, pages=None, to_file=False, cookies=None):
         for cookie in cookies:
             driver.add_cookie(cookie)
         driver.get('http://weibo.cn/')
-        if 'info' in driver.page_source:
+        if 'logout' in driver.page_source:
             print('登录成功')
         else:
             print('登录失败')
@@ -318,7 +319,7 @@ def crawl_repost(weibo_id, pages=None, graph=False, cookies=None, reposters={}):
         for cookie in cookies:
             driver.add_cookie(cookie)
         driver.get('http://weibo.cn/')
-        if 'info' in driver.page_source:
+        if 'logout' in driver.page_source:
             print('登录成功')
         else:
             print('登录失败')

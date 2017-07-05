@@ -97,8 +97,9 @@ def login(username, password):
 
     driver_cookies = driver.get_cookies()
     driver.get('http://weibo.cn/')
-    WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, 'c')))
-    if 'logout' in driver.page_source:
+    # WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, 'c')))
+    print(driver.page_source)
+    if 'setting' in driver.page_source:
         print('登录成功')
         driver.quit()
         cookies[username] = driver_cookies
@@ -126,7 +127,7 @@ def crawl_info(uid, to_file=False, cookies=None):
         for cookie in cookies:
             driver.add_cookie(cookie)
         driver.get('http://weibo.cn/')
-        if 'logout' in driver.page_source:
+        if 'setting' in driver.page_source:
             print('登录成功')
         else:
             print('登录失败')
@@ -182,7 +183,7 @@ def crawl_weibo(uid, pages=None, to_file=False, cookies=None):
         for cookie in cookies:
             driver.add_cookie(cookie)
         driver.get('http://weibo.cn/')
-        if 'logout' in driver.page_source:
+        if 'setting' in driver.page_source:
             print('登录成功')
         else:
             print('登录失败')
@@ -256,7 +257,7 @@ def crawl_fans(uid, pages=None, to_file=False, cookies=None):
         for cookie in cookies:
             driver.add_cookie(cookie)
         driver.get('http://weibo.cn/')
-        if 'info' in driver.page_source:
+        if 'setting' in driver.page_source:
             print('登录成功')
         else:
             print('登录失败')
@@ -319,7 +320,7 @@ def crawl_repost(weibo_id, pages=None, graph=False, cookies=None, reposters={}):
         for cookie in cookies:
             driver.add_cookie(cookie)
         driver.get('http://weibo.cn/')
-        if 'logout' in driver.page_source:
+        if 'setting' in driver.page_source:
             print('登录成功')
         else:
             print('登录失败')

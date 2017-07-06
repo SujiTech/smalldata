@@ -98,8 +98,8 @@ def login(username, password):
     driver_cookies = driver.get_cookies()
     driver.get('http://weibo.cn/')
     # WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, 'c')))
-    print(driver.page_source)
-    if 'setting' in driver.page_source:
+    # print(driver.page_source)
+    if 'logout' in driver.page_source:
         print('登录成功')
         driver.quit()
         cookies[username] = driver_cookies
@@ -110,7 +110,7 @@ def login(username, password):
         return False, None
 
 
-def crawl_info(uid, to_file=False, cookies=None):
+def crawl_info(uid, cookies=None):
     """
     Get information of specific user including nickname, uid, number of weibos, number of followers 
     and number of followings
@@ -127,7 +127,7 @@ def crawl_info(uid, to_file=False, cookies=None):
         for cookie in cookies:
             driver.add_cookie(cookie)
         driver.get('http://weibo.cn/')
-        if 'setting' in driver.page_source:
+        if 'logout' in driver.page_source:
             print('登录成功')
         else:
             print('登录失败')
@@ -160,15 +160,10 @@ def crawl_info(uid, to_file=False, cookies=None):
         'follower': num_follower
     }
 
-    if to_file:
-        with open(str(uid) + '_info.txt', "a+") as f:
-            f.write(str(json.dumps(user_info)).encode('utf-8'))
-            f.write('\n')
-
     return user_info
 
 
-def crawl_weibo(uid, pages=None, to_file=False, cookies=None):
+def crawl_weibo(uid, pages=None, cookies=None):
     """
     Get Weibo Details from specific user
     :param uid: id, preferred uid as number
@@ -183,7 +178,7 @@ def crawl_weibo(uid, pages=None, to_file=False, cookies=None):
         for cookie in cookies:
             driver.add_cookie(cookie)
         driver.get('http://weibo.cn/')
-        if 'setting' in driver.page_source:
+        if 'logout' in driver.page_source:
             print('登录成功')
         else:
             print('登录失败')
@@ -231,14 +226,10 @@ def crawl_weibo(uid, pages=None, to_file=False, cookies=None):
             }
             weibos.append(weibo_content)
 
-            if to_file:
-                with open(str(uid) + '_weibo.txt', "a+") as f:
-                    f.write(str(json.dumps(weibo_content)).encode('utf-8'))
-                    f.write('\n')
     return weibos
 
 
-def crawl_fans(uid, pages=None, to_file=False, cookies=None):
+def crawl_fans(uid, pages=None, cookies=None):
     """
     Get fans list for a user as a list (at most 200 fans limited by Sina)
     
@@ -257,7 +248,7 @@ def crawl_fans(uid, pages=None, to_file=False, cookies=None):
         for cookie in cookies:
             driver.add_cookie(cookie)
         driver.get('http://weibo.cn/')
-        if 'setting' in driver.page_source:
+        if 'logout' in driver.page_source:
             print('登录成功')
         else:
             print('登录失败')
@@ -292,11 +283,6 @@ def crawl_fans(uid, pages=None, to_file=False, cookies=None):
     #     # print fan_uid
     #     processed_fan_list.append(fan_uid)
 
-    if to_file:
-        with open(str(uid) + '_fans.txt', "a+") as f:
-            f.write(str(fans_list))
-            f.write('\n')
-
     driver.quit()
     return list(set(fans_list))
 
@@ -320,7 +306,7 @@ def crawl_repost(weibo_id, pages=None, graph=False, cookies=None, reposters={}):
         for cookie in cookies:
             driver.add_cookie(cookie)
         driver.get('http://weibo.cn/')
-        if 'setting' in driver.page_source:
+        if 'logout' in driver.page_source:
             print('登录成功')
         else:
             print('登录失败')

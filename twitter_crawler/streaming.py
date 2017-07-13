@@ -4,6 +4,7 @@ from __future__ import absolute_import, print_function
 from tweepy.streaming import StreamListener
 
 import datetime
+import pytz
 
 # Go to http://apps.twitter.com and create an app.
 # The consumer key and secret will be generated for you after
@@ -22,20 +23,20 @@ class SteamingToFileListener(StreamListener):
 
     """
 
-    def __init__(self, keyword=None):
+    def __init__(self, keyword=None, timezone='Japan'):
         super().__init__()
         if keyword is None:
             self.keyword = 'random'
         else:
             self.keyword = str(keyword)
-        self.date = str(datetime.date.today())
+        self.timezone = timezone
+        self.date = datetime.datetime.now(pytz.timezone(self.timezone)).date().strftime("%Y-%m-%d")
         self.f = open('data/' + self.date + '-' + self.keyword + '.txt', "a+")
 
     def on_data(self, data):
         # print(data)
         # tweet = json.loads(data)
-        today = str(datetime.date.today())
-
+        today = datetime.datetime.now(pytz.timezone(self.timezone)).date().strftime("%Y-%m-%d")
         if self.date is not today:
             self.f.close()
             self.date = today

@@ -2,14 +2,11 @@
 
 import re
 import time
-import json
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common import exceptions
-import networkx as nx
-import matplotlib.pyplot as plt
 
 
 def read_users(in_file, delimiter=" "):

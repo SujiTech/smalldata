@@ -85,11 +85,16 @@ class SinaCrawler(object):
             password_field.send_keys(self.password)
         except exceptions.InvalidElementStateException:
             self.cookies = None
+            return False
 
         WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.ID, 'loginAction')))
         time.sleep(2)
-        submit = driver.find_element_by_id('loginAction')
-        submit.click()
+        try:
+            submit = driver.find_element_by_id('loginAction')
+            submit.click()
+        except exceptions.ElementNotVisibleException:
+            self.cookies = None
+            return False
 
         self.cookies = driver.get_cookies()
         driver.quit()
@@ -199,18 +204,20 @@ class SinaCrawler(object):
             user_img_list = driver.find_elements_by_xpath('//table//td[@style]//a')
             # print("本页共有" + str(len(user_img_list)) + '个粉丝')
             for avatars in user_img_list:
-                fans_list.append(avatars.get_attribute('href').split("/")[-1])
-        # print(fans_list)
+                fanuid = avatars.get_attribute('href').split("/")[-1].strip()
+                print(fanuid, end=" ")
+                fans_list.append(fanuid)
+                print()
         driver.quit()
         return fans_list
 
-    def crawl_repost(self, weiboid, pages=None):
+    def crawl_weiboid(self, uid, pages=None):
         """
-        Crawl repost information around a weibo.
+        Find weibos for a user
 
-        :param weiboid: weibo's id itself
+        :param uid: person to crawl
         :param pages: pages to crawl
-        :return: a dict from reposter uid to repost content and from uid.
+        :return: a list of weibos
         """
 
         if not self.test_cookies():
@@ -222,56 +229,100 @@ class SinaCrawler(object):
             driver.add_cookie(cookie)
 
         if pages is None:
-            driver.get('https://weibo.cn/repost/' + weiboid)
+            driver.get('https://weibo.cn/' + str(uid) + '?filter=1')
             try:
                 pages = int(driver.find_element_by_xpath('//input[@name="mp"]').get_attribute('value'))
             except exceptions.NoSuchElementException:
                 pages = 1
 
-        reposters = []
-        print("======获取原微博======")
-        driver.get('https://weibo.cn/repost/' + weiboid)
-        nickname = driver.find_element_by_xpath('//div[@id="M_"]//a').text
-        uid = driver.find_element_by_xpath('//div[@id="M_"]//a').get_attribute('href').split('/')[-1]
-        content = driver.find_element_by_xpath('//div[@id="M_"]//span').text[1:]
-        print(content)
-        repost_info = {
-            'from_weibo_id': None,
-            'nickname': nickname,
-            'uid': uid,
-            'content': content,
-            # 'from_uid': [repost_from_uid],
-            'weibo_id': weiboid,
-        }
-        reposters.append(repost_info)
-
-        print("======获取转发======")
+        print("======获取微博======")
+        weibo_list = []
         for i in range(1, pages + 1):
-            driver.get('https://weibo.cn/repost/' + weiboid + '?page=' + str(i))
-            repost_list = driver.find_elements_by_xpath('//div[@class="c"]')
-            # print(len(repost_list))
-            for repost in repost_list:
-                if 'attitude' not in repost.get_attribute('innerHTML'):
-                    continue
+            print("正在抓取第" + str(i) + "页")
+            driver.get('https://weibo.cn/' + str(uid) + '?filter=1&page=' + str(i))
+            # print('https://weibo.cn/' + str(uid) + 'filter=1&page=' + str(i))
+            weibo_id_element = driver.find_elements_by_partial_link_text(u'赞')
+            for weibo_element in weibo_id_element:
+                weiboid = weibo_element.get_attribute('href').split('/')[-2]
+                print(weiboid, end=" ")
+                weibo_list.append(weiboid)
+            print()
+        driver.quit()
+        return weibo_list
 
-                reposter_info = repost.find_element_by_xpath('.//a')
-                reposter_nickname = reposter_info.text
-                reposter_uid = reposter_info.get_attribute('href').split("/")[-1]
-                reposter_content = ":".join(repost.text.split(":")[1:])
-                reposter_content = reposter_content[:reposter_content.find(u'赞')].split("//@")[0]
-                repost_weibo_id = repost.find_element_by_partial_link_text(u'赞').get_attribute('href').split("/")[-2]
-                print(repost_weibo_id, end=" ")
 
-                repost_info = {
-                    'from_weibo_id': weiboid,
-                    'nickname': reposter_nickname,
-                    'uid': reposter_uid,
-                    'content': reposter_content,
-                    # 'from_uid': [repost_from_uid],
-                    'weibo_id': repost_weibo_id,
-                }
-                reposters.append(repost_info)
-        print()
+    def crawl_repost(self, weiboid, pages=None):
+        """
+        Crawl repost information around a weibo.
+
+        :param weiboid: weibo's id itself
+        :param pages: pages to crawl
+        :return: a list of repost information
+        """
+
+        if not self.test_cookies():
+            if not self.login():
+                return None
+
+        driver = webdriver.PhantomJS()
+        for cookie in self.cookies:
+            driver.add_cookie(cookie)
+
+        try:
+            if pages is None:
+                driver.get('https://weibo.cn/repost/' + weiboid)
+                try:
+                    pages = int(driver.find_element_by_xpath('//input[@name="mp"]').get_attribute('value'))
+                except exceptions.NoSuchElementException:
+                    pages = 1
+
+            reposters = []
+            print("======获取原微博======")
+            driver.get('https://weibo.cn/repost/' + weiboid)
+            nickname = driver.find_element_by_xpath('//div[@id="M_"]//a').text
+            uid = driver.find_element_by_xpath('//div[@id="M_"]//a').get_attribute('href').split('/')[-1]
+            content = driver.find_element_by_xpath('//div[@id="M_"]//span').text[1:]
+            print(content)
+            repost_info = {
+                'from_weibo_id': None,
+                'nickname': nickname,
+                'uid': uid,
+                'content': content,
+                # 'from_uid': [repost_from_uid],
+                'weibo_id': weiboid,
+            }
+            reposters.append(repost_info)
+
+            print("======获取转发======")
+            for i in range(1, pages + 1):
+                driver.get('https://weibo.cn/repost/' + weiboid + '?page=' + str(i))
+                repost_list = driver.find_elements_by_xpath('//div[@class="c"]')
+                # print(len(repost_list))
+                for repost in repost_list:
+                    if 'attitude' not in repost.get_attribute('innerHTML'):
+                        continue
+
+                    reposter_info = repost.find_element_by_xpath('.//a')
+                    reposter_nickname = reposter_info.text
+                    reposter_uid = reposter_info.get_attribute('href').split("/")[-1]
+                    reposter_content = ":".join(repost.text.split(":")[1:])
+                    reposter_content = reposter_content[:reposter_content.find(u'赞')].split("//@")[0]
+                    repost_weibo_id = repost.find_element_by_partial_link_text(u'赞').get_attribute('href').split("/")[-2]
+                    print(repost_weibo_id, end=" ")
+
+                    if weiboid is not 'weibo.cn':
+                        repost_info = {
+                            'from_weibo_id': weiboid,
+                            'nickname': reposter_nickname,
+                            'uid': reposter_uid,
+                            'content': reposter_content,
+                            # 'from_uid': [repost_from_uid],
+                            'weibo_id': repost_weibo_id,
+                        }
+                        reposters.append(repost_info)
+            print()
+        except Exception as e:
+            return None
         driver.quit()
         return reposters
 

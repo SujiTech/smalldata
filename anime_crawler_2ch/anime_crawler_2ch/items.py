@@ -8,7 +8,14 @@
 import scrapy
 
 
-class AnimeCrawler2ChItem(scrapy.Item):
-    # define the fields for your item here like:
-    # name = scrapy.Field()
-    pass
+class ThreadItem(scrapy.Item):
+    url = scrapy.Field()
+    title = scrapy.Field()
+    posts = scrapy.Field()
+
+class PostItem(scrapy.Item):
+    number = scrapy.Field()
+    name = scrapy.Field()
+    date = scrapy.Field()
+    uid = scrapy.Field()
+    message = scrapy.Field()

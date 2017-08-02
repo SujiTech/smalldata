@@ -2,6 +2,7 @@
 import scrapy
 from anime_crawler_2ch.items import ThreadItem, PostItem
 
+
 class AnicrawlerSpider(scrapy.Spider):
     name = 'anicrawler'
     allowed_domains = ['2ch.net']
@@ -10,7 +11,7 @@ class AnicrawlerSpider(scrapy.Spider):
     def parse(self, response):
         for url in response.xpath('//small[@id="trad"]//a/@href').extract():
             aniurl = response.urljoin(url.split('/')[0])
-            yield scrapy.Request(url=aniurl, callback=self.parse_anime )
+            yield scrapy.Request(url=aniurl, callback=self.parse_anime)
             # break
 
     def parse_anime(self, response):

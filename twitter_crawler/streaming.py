@@ -5,6 +5,8 @@ from tweepy.streaming import StreamListener
 
 import datetime
 import pytz
+import json
+import csv
 
 # Go to http://apps.twitter.com and create an app.
 # The consumer key and secret will be generated for you after
@@ -50,4 +52,31 @@ class SteamingToFileListener(StreamListener):
     def on_error(self, status):
         print(status)
 
+class KOLtoFileListener(StreamListener):
+    """ A listener handles tweets that are received from the stream.
+    This is a basic listener that just prints received tweets to stdout.
+
+    """
+
+    def __init__(self, keyword=None):
+        super().__init__()
+        if keyword is None:
+            self.keyword = 'all'
+        else:
+            self.keyword = str(keyword)
+        self.f = open('data/' + self.keyword + '-kol.csv', "a+", encoding='utf-8') 
+        self.writer = csv.writer(self.f, delimiter=',')
+        # self.writer.writerow(['昵称', '用户名', '简介', '粉丝', '关注', '推文数', '喜欢'])
+
+    def on_data(self, data):
+        # print(data)
+        tweet = json.loads(data)
+        des = tweet['user']['description']
+        if u'画家' in des or u'アニメーター' in des or u'脚本' in des or u'ライター' in des or u'イラストレーター' in des:
+            print(tweet['user']['name'])
+            self.writer.writerow([tweet['user']['name'], tweet['user']['screen_name'], tweet['user']['description'], tweet['user']['followers_count'], tweet['user']['friends_count'], tweet['user']['statuses_count'], tweet['user']['favourites_count']])
+        return True
+
+    def on_error(self, status):
+        print(status)
 

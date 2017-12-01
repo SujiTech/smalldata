@@ -43,10 +43,8 @@ class SteamingToFileListener(StreamListener):
             self.f.close()
             self.date = today
             self.f = open('data/' + self.date + '-' + self.keyword + '.txt', "a+")
-
         print(data)
         self.f.write(str(data))
-        
         return True
 
     def on_error(self, status):
@@ -71,11 +69,16 @@ class KOLtoFileListener(StreamListener):
     def on_data(self, data):
         # print(data)
         tweet = json.loads(data)
-        des = tweet['user']['description']
-        if u'画家' in des or u'アニメーター' in des or u'脚本' in des or u'ライター' in des or u'イラストレーター' in des:
-            print(tweet['user']['name'])
-            self.writer.writerow([tweet['user']['name'], tweet['user']['screen_name'], tweet['user']['description'], tweet['user']['followers_count'], tweet['user']['friends_count'], tweet['user']['statuses_count'], tweet['user']['favourites_count']])
+        try:
+            des = tweet['user']['description']
+            if u'画家' in des or u'アニメーター' in des or u'脚本' in des or u'ライター' in des or u'イラストレーター' in des:
+                print(tweet['user']['name'])
+                self.writer.writerow([tweet['user']['name'], tweet['user']['screen_name'], tweet['user']['description'], tweet['user']['followers_count'], tweet['user']['friends_count'], tweet['user']['statuses_count'], tweet['user']['favourites_count']])
+        except Exception:
+            pass
+        
         return True
+
 
     def on_error(self, status):
         print(status)

@@ -17,6 +17,7 @@ with open('data/all-kol.csv', 'r') as in_file:
             'statuses_count': row[5],
             'favourites_count': row[6]
         }
-        result = db.info.replace({'screen_name': row[1]}, kol_data, True)
+
+        result = db.info.replace_one({'screen_name': row[1]}, kol_data, True)
         print(result.matched_count)
         print(result.upserted_id)

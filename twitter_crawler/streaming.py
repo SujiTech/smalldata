@@ -87,7 +87,7 @@ class KOLtoFileListener(StreamListener):
                     'statuses_count': tweet['user']['statuses_count'], 
                     'favourites_count': tweet['user']['favourites_count']
                 }
-                result = self.db.replace_one({'screen_name': tweet['user']['screen_name']}, kol_data, True)
+                result = self.db.info.replace_one({'screen_name': tweet['user']['screen_name']}, kol_data, True)
                 print(result.matched_count)
                 print(result.upserted_id)
         except Exception:
